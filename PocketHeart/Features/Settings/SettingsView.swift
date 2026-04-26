@@ -20,8 +20,3 @@ struct SettingsView: View {
         .navigationTitle("Settings")
     }
 }
-
-// Stubs — replaced by Task 22
-struct CategoriesView: View { var body: some View { Text("Categories").foregroundStyle(.white) } }
-struct TagsView: View { var body: some View { Text("Tags").foregroundStyle(.white) } }
-struct PaymentMethodsView: View { var body: some View { Text("Payment methods").foregroundStyle(.white) } }

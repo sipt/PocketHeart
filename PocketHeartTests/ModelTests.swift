@@ -34,3 +34,14 @@ struct TransactionModelTests {
 }
 
 private let UUID_NULL = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
+struct SeedingTests {
+    @Test @MainActor func seedingCreatesBuiltInTaxonomyOnce() throws {
+        let container = AppContainer.make(inMemory: true)
+        let ctx = container.mainContext
+        let cats = try ctx.fetch(FetchDescriptor<LedgerCategory>())
+        let pays = try ctx.fetch(FetchDescriptor<PaymentMethod>())
+        #expect(cats.count == SeedData.categories.count)
+        #expect(pays.count == SeedData.paymentMethods.count)
+    }
+}

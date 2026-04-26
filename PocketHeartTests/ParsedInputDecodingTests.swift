@@ -41,3 +41,34 @@ struct ParsedInputDecodingTests {
         }
     }
 }
+
+struct FakeAdapter: ProviderAdapter {
+    let response: Result<String, any Error>
+    func send(_ request: AdapterRequest) async throws -> String {
+        try response.get()
+    }
+}
+
+struct AIParsingServiceTests {
+    let context = ParsingContext(
+        now: Date(timeIntervalSince1970: 1_700_000_000),
+        timeZone: TimeZone(identifier: "Asia/Shanghai")!,
+        locale: Locale(identifier: "zh_CN"),
+        defaultCurrency: "CNY",
+        categories: [], tags: [], paymentMethods: []
+    )
+
+    @Test func parsesValidResponse() async throws {
+        let json = #"{"transactions":[{"amount":12,"currency":"CNY","type":"expense","title":"a","occurredAt":"2026-04-25T10:00:00+08:00","categoryName":"Food","tagNames":[],"paymentMethodName":"Cash"}],"failed":[]}"#
+        let svc = AIParsingService(adapter: FakeAdapter(response: .success(json)))
+        let result = try await svc.parse(input: "x", apiKey: "k", baseURL: "https://x/v1", model: "m", context: context)
+        #expect(result.transactions.count == 1)
+    }
+
+    @Test func wrapsAdapterErrors() async {
+        let svc = AIParsingService(adapter: FakeAdapter(response: .failure(AdapterError.http(500, "boom"))))
+        await #expect(throws: AIParsingError.self) {
+            _ = try await svc.parse(input: "x", apiKey: "k", baseURL: "u", model: "m", context: context)
+        }
+    }
+}

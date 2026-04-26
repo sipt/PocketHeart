@@ -49,18 +49,18 @@ final class RecordingViewModel {
 
     func startRecording() async {
         guard await env.speech.requestAuthorization() else {
-            errorMessage = "Microphone or speech permission denied. Use the text input or open Settings."
+            errorMessage = L("Microphone or speech permission denied. Use the text input or open Settings.")
             return
         }
         do {
             isRecording = true
             liveTranscript = ""
-            try await env.speech.startRecording { [weak self] partial in
+            try await env.speech.startRecording(locale: LocalizationManager.shared.resolvedLocale) { [weak self] partial in
                 Task { @MainActor in self?.liveTranscript = partial }
             }
         } catch {
             isRecording = false
-            errorMessage = "Couldn't start recording: \(error.localizedDescription)"
+            errorMessage = String(format: L("Couldn't start recording: %@"), error.localizedDescription)
         }
     }
 
@@ -71,7 +71,7 @@ final class RecordingViewModel {
             let transcript = try await env.speech.stop()
             liveTranscript = ""
             guard !transcript.isEmpty else {
-                errorMessage = "No speech detected. Tap to retry."
+                errorMessage = L("No speech detected. Tap to retry.")
                 return
             }
             await runSubmission(rawText: transcript, source: .voice)
@@ -89,16 +89,16 @@ final class RecordingViewModel {
     private func runSubmission(rawText: String, source: InputSource) async {
         let maybeProvider: AIProvider?
         do { maybeProvider = try env.defaultProvider() }
-        catch { errorMessage = "No active AI provider — open Settings to add one."; return }
+        catch { errorMessage = L("No active AI provider — open Settings to add one."); return }
         guard let provider = maybeProvider else {
-            errorMessage = "No active AI provider — open Settings to add one."
+            errorMessage = L("No active AI provider — open Settings to add one.")
             return
         }
         let key: String
         do { key = try env.keychain.get(account: provider.id.uuidString) ?? "" }
-        catch { errorMessage = "Couldn't read API key: \(error.localizedDescription)"; return }
+        catch { errorMessage = String(format: L("Couldn't read API key: %@"), error.localizedDescription); return }
         guard !key.isEmpty else {
-            errorMessage = "Missing API key for \(provider.displayName) — open provider settings."
+            errorMessage = String(format: L("Missing API key for %@ — open provider settings."), provider.displayName)
             return
         }
 
@@ -124,10 +124,10 @@ final class RecordingViewModel {
 
     private func describe(_ e: AIParsingError) -> String {
         switch e {
-        case .missingAPIKey: return "Provider is missing an API key."
-        case .missingProvider: return "No AI provider is configured."
-        case .invalidJSON: return "AI response wasn't valid JSON."
-        case .providerFailure(let s): return "Provider error: \(s)"
+        case .missingAPIKey: return L("Provider is missing an API key.")
+        case .missingProvider: return L("No AI provider is configured.")
+        case .invalidJSON: return L("AI response wasn't valid JSON.")
+        case .providerFailure(let s): return String(format: L("Provider error: %@"), s)
         }
     }
 
@@ -139,7 +139,7 @@ final class RecordingViewModel {
         let refs = cats.map { ParsingContext.CategoryRef(id: $0.id, name: $0.name, parentName: $0.parentID.flatMap { nameByID[$0] }) }
         let tags = try ctx.fetch(FetchDescriptor<LedgerTag>(predicate: #Predicate { $0.isArchived == archived })).map(\.name)
         let pays = try ctx.fetch(FetchDescriptor<PaymentMethod>(predicate: #Predicate { $0.isArchived == archived })).map(\.name)
-        return ParsingContext(now: .now, timeZone: .current, locale: .current, defaultCurrency: defaultCurrency, categories: refs, tags: tags, paymentMethods: pays)
+        return ParsingContext(now: .now, timeZone: .current, locale: LocalizationManager.shared.resolvedLocale, defaultCurrency: defaultCurrency, categories: refs, tags: tags, paymentMethods: pays)
     }
 
     private func buildGroupCard(for entry: InputEntry, overrideFailed: [ParsedFailure]? = nil) throws -> GroupCardModel {

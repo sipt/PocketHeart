@@ -110,7 +110,8 @@ struct RecordingView: View {
     }
 
     private var monthHeader: String {
-        Date.now.formatted(.dateTime.month(.wide)) + " · Today"
+        let month = Date.now.formatted(.dateTime.month(.wide).locale(LocalizationManager.shared.resolvedLocale))
+        return String(format: L("%@ · Today"), month)
     }
     private var activeProviderName: String? {
         guard let env = appEnv else { return nil }

@@ -4,7 +4,7 @@ import Speech
 
 protocol SpeechServiceProtocol: AnyObject, Sendable {
     func requestAuthorization() async -> Bool
-    func startRecording(onPartial: @Sendable @escaping (String) -> Void) async throws
+    func startRecording(locale: Locale, onPartial: @Sendable @escaping (String) -> Void) async throws
     func stop() async throws -> String
     func cancel()
 }
@@ -17,7 +17,7 @@ enum SpeechServiceError: Error {
 
 @MainActor
 final class SpeechService: SpeechServiceProtocol {
-    private let recognizer = SFSpeechRecognizer()
+    private var recognizer: SFSpeechRecognizer?
     private let audioEngine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -33,7 +33,8 @@ final class SpeechService: SpeechServiceProtocol {
         return speechOK && micOK
     }
 
-    func startRecording(onPartial: @Sendable @escaping (String) -> Void) async throws {
+    func startRecording(locale: Locale, onPartial: @Sendable @escaping (String) -> Void) async throws {
+        recognizer = SFSpeechRecognizer(locale: locale)
         guard let recognizer, recognizer.isAvailable else { throw SpeechServiceError.recognizerUnavailable }
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
@@ -66,6 +67,7 @@ final class SpeechService: SpeechServiceProtocol {
         let final = lastTranscript
         request = nil
         task = nil
+        recognizer = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         return final
     }
@@ -76,5 +78,6 @@ final class SpeechService: SpeechServiceProtocol {
         task?.cancel()
         task = nil
         request = nil
+        recognizer = nil
     }
 }

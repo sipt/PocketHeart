@@ -10,9 +10,27 @@ struct FakeParser: AIParsingServiceProtocol {
     }
 }
 
+actor CapturingParser: AIParsingServiceProtocol {
+    let result: Result<ParsedInputResult, any Error>
+    private(set) var capturedContext: ParsingContext?
+
+    init(result: Result<ParsedInputResult, any Error>) {
+        self.result = result
+    }
+
+    func parse(input: String, apiKey: String, baseURL: String, model: String, context: ParsingContext) async throws -> ParsedInputResult {
+        capturedContext = context
+        return try result.get()
+    }
+}
+
 final class FakeSpeech: SpeechServiceProtocol {
+    nonisolated(unsafe) var lastLocaleIdentifier: String?
+
     func requestAuthorization() async -> Bool { true }
-    func startRecording(onPartial: @Sendable @escaping (String) -> Void) async throws {}
+    func startRecording(locale: Locale, onPartial: @Sendable @escaping (String) -> Void) async throws {
+        lastLocaleIdentifier = locale.identifier
+    }
     func stop() async throws -> String { "" }
     func cancel() {}
 }
@@ -64,5 +82,45 @@ struct RecordingViewModelTests {
         let vm = RecordingViewModel(env: env, repository: LedgerRepository(context: container.mainContext), stats: StatsService(context: container.mainContext))
         await vm.submitText("anything")
         #expect(vm.errorMessage?.contains("provider") == true)
+    }
+
+    @Test func appLanguageResolvesSystemAndExplicitLocales() {
+        #expect(AppLanguage.system.resolvedLocale(preferredLocalizations: ["zh-Hans"]).identifier == "zh-Hans")
+        #expect(AppLanguage.en.resolvedLocale(preferredLocalizations: ["zh-Hans"]).identifier == "en")
+    }
+
+    @Test func recordingUsesSelectedAppLanguageLocale() async {
+        let previous = LocalizationManager.shared.language
+        defer { LocalizationManager.shared.language = previous }
+
+        let speech = FakeSpeech()
+        LocalizationManager.shared.language = .zhHans
+        let container = AppContainer.make(inMemory: true)
+        Self._containers.append(container)
+        let env = AppEnvironment(container: container, speech: speech, parser: FakeParser(result: .success(.init(transactions: [], failed: []))))
+        let vm = RecordingViewModel(env: env, repository: LedgerRepository(context: container.mainContext), stats: StatsService(context: container.mainContext))
+
+        await vm.startRecording()
+
+        #expect(speech.lastLocaleIdentifier == "zh-Hans")
+    }
+
+    @Test func parsingContextUsesSelectedAppLanguageLocale() async throws {
+        let previous = LocalizationManager.shared.language
+        defer { LocalizationManager.shared.language = previous }
+
+        let parsed = ParsedTransaction(
+            amount: Decimal(12), currency: "CNY", type: .expense, title: "Coffee",
+            merchant: nil, occurredAt: Date(), categoryName: "Food",
+            subcategoryName: nil, tagNames: [], paymentMethodName: "Cash", notes: nil
+        )
+        let parser = CapturingParser(result: .success(.init(transactions: [parsed], failed: [])))
+        LocalizationManager.shared.language = .zhHans
+        let (vm, _) = makeVM(parser: parser)
+
+        await vm.submitText("coffee 12")
+
+        let localeID = await parser.capturedContext?.locale.identifier
+        #expect(localeID == "zh-Hans")
     }
 }

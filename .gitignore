@@ -6,3 +6,4 @@ build/
 *.swp
 .omc/state/
 .omc/logs/
+.omx/

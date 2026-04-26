@@ -18,7 +18,7 @@ struct InputBar: View {
 
             ZStack {
                 if isRecording {
-                    Text(liveTranscript.isEmpty ? "Listening…" : liveTranscript)
+                    Text(liveTranscript.isEmpty ? L("Listening…") : liveTranscript)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.white.opacity(0.75))
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -31,6 +31,7 @@
       }
     },
     "%@ · Today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -737,6 +738,7 @@
       }
     },
     "Ledger" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1061,6 +1063,22 @@
         }
       }
     },
+    "PocketHeart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PocketHeart"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存心"
+          }
+        }
+      }
+    },
     "Provider" : {
       "localizations" : {
         "en" : {
@@ -1318,7 +1336,6 @@
       }
     },
     "Today" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

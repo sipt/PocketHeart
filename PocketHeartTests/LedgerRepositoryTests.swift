@@ -87,4 +87,29 @@ struct LedgerRepositoryTests {
         #expect(txn.title == "new")
         #expect(txn.updatedAt > originalUpdated)
     }
+
+    @Test func inputEntryPaginationReturnsLatestAndOlderPages() throws {
+        let (repo, ctx) = makeRepo()
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        for index in 0..<5 {
+            ctx.insert(InputEntry(
+                rawText: "entry \(index)",
+                source: .text,
+                createdAt: base.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try ctx.save()
+
+        let latest = try repo.latestInputEntries(limit: 2)
+        #expect(latest.map(\.rawText) == ["entry 4", "entry 3"])
+
+        let older = try repo.inputEntries(before: latest.last!.createdAt, limit: 2)
+        #expect(older.map(\.rawText) == ["entry 2", "entry 1"])
+
+        let oldest = try repo.inputEntries(before: older.last!.createdAt, limit: 2)
+        #expect(oldest.map(\.rawText) == ["entry 0"])
+
+        let empty = try repo.inputEntries(before: oldest.last!.createdAt, limit: 2)
+        #expect(empty.isEmpty)
+    }
 }

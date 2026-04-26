@@ -77,10 +77,23 @@ final class LedgerRepository {
         try context.save()
     }
 
-    func recentInputEntries(limit: Int = 50) throws -> [InputEntry] {
+    func latestInputEntries(limit: Int = 25) throws -> [InputEntry] {
         var fd = FetchDescriptor<InputEntry>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         fd.fetchLimit = limit
         return try context.fetch(fd)
+    }
+
+    func inputEntries(before date: Date, limit: Int = 25) throws -> [InputEntry] {
+        var fd = FetchDescriptor<InputEntry>(
+            predicate: #Predicate { $0.createdAt < date },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        fd.fetchLimit = limit
+        return try context.fetch(fd)
+    }
+
+    func recentInputEntries(limit: Int = 50) throws -> [InputEntry] {
+        try latestInputEntries(limit: limit)
     }
 
     func transactions(for entry: InputEntry) throws -> [Transaction] {

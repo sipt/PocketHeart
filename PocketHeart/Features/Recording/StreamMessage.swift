@@ -1,13 +1,29 @@
 import Foundation
 
 struct StreamMessage: Identifiable, Equatable {
-    let id = UUID()
+    let id: String
     enum Kind: Equatable {
         case dayDivider(label: String)
         case userBubble(text: String, source: InputSource, time: Date)
         case group(GroupCardModel)
     }
     var kind: Kind
+
+    init(id: String = UUID().uuidString, kind: Kind) {
+        self.id = id
+        self.kind = kind
+    }
+}
+
+struct RecordingScrollRequest: Equatable {
+    enum Target: Equatable {
+        case bottom
+        case message(String)
+    }
+
+    let id = UUID()
+    let target: Target
+    let animated: Bool
 }
 
 struct GroupCardModel: Equatable {

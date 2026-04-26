@@ -55,6 +55,30 @@ struct RecordingViewModelTests {
         return (vm, ctx)
     }
 
+    private func seedInputEntries(_ count: Int, in ctx: ModelContext) throws {
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        for index in 0..<count {
+            ctx.insert(InputEntry(
+                rawText: "entry \(index)",
+                source: .text,
+                createdAt: base.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try ctx.save()
+    }
+
+    private func userBubbleTexts(_ messages: [StreamMessage]) -> [String] {
+        messages.compactMap { message in
+            if case .userBubble(let text, _, _) = message.kind { text } else { nil }
+        }
+    }
+
+    private func firstUserBubbleID(_ messages: [StreamMessage]) -> String? {
+        messages.first { message in
+            if case .userBubble = message.kind { true } else { false }
+        }?.id
+    }
+
     @Test func textSubmissionAddsUserBubbleAndGroupCard() async throws {
         let parsed = ParsedTransaction(
             amount: Decimal(38), currency: "CNY", type: .expense, title: "Lunch",
@@ -122,5 +146,48 @@ struct RecordingViewModelTests {
 
         let localeID = await parser.capturedContext?.locale.identifier
         #expect(localeID == "zh-Hans")
+    }
+
+    @Test func loadShowsLatestPageInChronologicalOrder() throws {
+        let (vm, ctx) = makeVM(parser: FakeParser(result: .success(.init(transactions: [], failed: []))))
+        try seedInputEntries(30, in: ctx)
+
+        vm.load()
+
+        let texts = userBubbleTexts(vm.messages)
+        #expect(texts.count == 25)
+        #expect(texts.first == "entry 5")
+        #expect(texts.last == "entry 29")
+        #expect(vm.hasMoreHistory)
+        #expect(vm.oldestLoadedAt == Date(timeIntervalSince1970: 1_700_000_005))
+    }
+
+    @Test func loadOlderPrependsEarlierPageAndPreservesAnchor() throws {
+        let (vm, ctx) = makeVM(parser: FakeParser(result: .success(.init(transactions: [], failed: []))))
+        try seedInputEntries(30, in: ctx)
+        vm.load()
+        let anchorID = try #require(firstUserBubbleID(vm.messages))
+
+        vm.loadOlder()
+
+        let texts = userBubbleTexts(vm.messages)
+        #expect(texts.count == 30)
+        #expect(texts.first == "entry 0")
+        #expect(texts.last == "entry 29")
+        #expect(vm.hasMoreHistory == false)
+        #expect(vm.oldestLoadedAt == Date(timeIntervalSince1970: 1_700_000_000))
+        #expect(vm.scrollRequest?.target == .message(anchorID))
+    }
+
+    @Test func loadOlderSkipsWhileAlreadyLoading() throws {
+        let (vm, ctx) = makeVM(parser: FakeParser(result: .success(.init(transactions: [], failed: []))))
+        try seedInputEntries(30, in: ctx)
+        vm.load()
+        let messages = vm.messages
+
+        vm.isLoadingOlder = true
+        vm.loadOlder()
+
+        #expect(vm.messages == messages)
     }
 }

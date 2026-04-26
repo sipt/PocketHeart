@@ -12,10 +12,17 @@ final class RecordingViewModel {
     var liveTranscript: String = ""
     var errorMessage: String?
     var summary: StatsSummary?
+    var isLoadingOlder: Bool = false
+    var hasMoreHistory: Bool = false
+    var oldestLoadedAt: Date?
+    var scrollRequest: RecordingScrollRequest?
 
     let env: AppEnvironment
     let repository: LedgerRepository
     let stats: StatsService
+    private let pageSize = 25
+    private var loadedEntries: [InputEntry] = []
+    private var failedOverridesByEntryID: [UUID: [ParsedFailure]] = [:]
 
     init(env: AppEnvironment, repository: LedgerRepository, stats: StatsService) {
         self.env = env
@@ -25,16 +32,37 @@ final class RecordingViewModel {
 
     func load() {
         do {
-            let entries = Array(try repository.recentInputEntries(limit: 50).reversed())
-            messages = []
-            messages.append(.init(kind: .dayDivider(label: "Today")))
-            for e in entries {
-                messages.append(.init(kind: .userBubble(text: e.rawText, source: e.source, time: e.createdAt)))
-                if let card = try? buildGroupCard(for: e) {
-                    messages.append(.init(kind: .group(card)))
-                }
-            }
+            let entries = try repository.latestInputEntries(limit: pageSize)
+            failedOverridesByEntryID = [:]
+            loadedEntries = Array(entries.reversed())
+            rebuildMessages()
+            updatePaginationState(from: entries)
             summary = try stats.summary()
+            requestScrollToBottom(animated: false)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadOlder() {
+        guard !isLoadingOlder, hasMoreHistory, let oldestLoadedAt else { return }
+        guard let anchorID = firstLoadedEntryUserBubbleID else { return }
+
+        isLoadingOlder = true
+        defer { isLoadingOlder = false }
+
+        do {
+            let older = try repository.inputEntries(before: oldestLoadedAt, limit: pageSize)
+            guard !older.isEmpty else {
+                hasMoreHistory = false
+                return
+            }
+
+            loadedEntries.insert(contentsOf: Array(older.reversed()), at: 0)
+            rebuildMessages()
+            self.oldestLoadedAt = loadedEntries.first?.createdAt
+            hasMoreHistory = older.count == pageSize
+            scrollRequest = RecordingScrollRequest(target: .message(anchorID), animated: false)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -102,7 +130,8 @@ final class RecordingViewModel {
             return
         }
 
-        messages.append(.init(kind: .userBubble(text: rawText, source: source, time: .now)))
+        messages.append(.init(id: "pending-\(UUID().uuidString)", kind: .userBubble(text: rawText, source: source, time: .now)))
+        requestScrollToBottom(animated: true)
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -111,8 +140,9 @@ final class RecordingViewModel {
             let parsed = try await env.parser.parse(input: rawText, apiKey: key, baseURL: provider.baseURL, model: provider.modelName, context: context)
             let result = try repository.save(input: rawText, source: source, providerID: provider.id, parsed: parsed)
             if let entry = try repository.recentInputEntries(limit: 1).first, entry.id == result.inputEntryID {
-                let card = try buildGroupCard(for: entry, overrideFailed: result.failedItems)
-                messages.append(.init(kind: .group(card)))
+                failedOverridesByEntryID[entry.id] = result.failedItems
+                appendLoadedEntry(entry)
+                requestScrollToBottom(animated: true)
             }
             summary = try stats.summary()
         } catch let e as AIParsingError {
@@ -120,6 +150,69 @@ final class RecordingViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private var firstLoadedEntryUserBubbleID: String? {
+        loadedEntries.first.map { userBubbleID(for: $0.id) }
+    }
+
+    private func updatePaginationState(from fetchedEntries: [InputEntry]) {
+        oldestLoadedAt = loadedEntries.first?.createdAt
+        hasMoreHistory = fetchedEntries.count == pageSize
+    }
+
+    private func appendLoadedEntry(_ entry: InputEntry) {
+        loadedEntries.removeAll { $0.id == entry.id }
+        loadedEntries.append(entry)
+        loadedEntries.sort {
+            if $0.createdAt == $1.createdAt {
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            return $0.createdAt < $1.createdAt
+        }
+        oldestLoadedAt = loadedEntries.first?.createdAt
+        rebuildMessages()
+    }
+
+    private func rebuildMessages() {
+        var next: [StreamMessage] = []
+        var currentDay: Date?
+        let calendar = Calendar.current
+
+        for entry in loadedEntries {
+            let day = calendar.startOfDay(for: entry.createdAt)
+            if currentDay != day {
+                currentDay = day
+                next.append(.init(id: dayDividerID(for: day), kind: .dayDivider(label: dayLabel(for: entry.createdAt, calendar: calendar))))
+            }
+            next.append(.init(id: userBubbleID(for: entry.id), kind: .userBubble(text: entry.rawText, source: entry.source, time: entry.createdAt)))
+            if let card = try? buildGroupCard(for: entry, overrideFailed: failedOverridesByEntryID[entry.id]) {
+                next.append(.init(id: groupID(for: entry.id), kind: .group(card)))
+            }
+        }
+
+        messages = next
+    }
+
+    private func requestScrollToBottom(animated: Bool) {
+        scrollRequest = RecordingScrollRequest(target: .bottom, animated: animated)
+    }
+
+    private func userBubbleID(for entryID: UUID) -> String {
+        "entry-\(entryID.uuidString)-user"
+    }
+
+    private func groupID(for entryID: UUID) -> String {
+        "entry-\(entryID.uuidString)-group"
+    }
+
+    private func dayDividerID(for day: Date) -> String {
+        "day-\(Int(day.timeIntervalSince1970))"
+    }
+
+    private func dayLabel(for date: Date, calendar: Calendar) -> String {
+        if calendar.isDateInToday(date) { return L("Today") }
+        return date.formatted(.dateTime.year().month(.abbreviated).day().locale(LocalizationManager.shared.resolvedLocale))
     }
 
     private func describe(_ e: AIParsingError) -> String {

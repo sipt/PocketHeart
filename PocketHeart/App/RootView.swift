@@ -9,5 +9,3 @@ struct RootView: View {
     }
 }
 
-// Stubs — replaced by later tasks
-struct SettingsView: View { var body: some View { Text("Settings").foregroundStyle(.white) } }

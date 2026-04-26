@@ -2,9 +2,14 @@ import SwiftUI
 
 struct RootView: View {
     var body: some View {
-        Text("Voice Ledger")
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.black)
+        NavigationStack {
+            RecordingView()
+        }
+        .tint(Theme.primary)
     }
 }
+
+// Stubs — replaced by later tasks
+struct StatsView: View { var body: some View { Text("Stats").foregroundStyle(.white) } }
+struct SettingsView: View { var body: some View { Text("Settings").foregroundStyle(.white) } }
+struct EditTransactionView: View { let transactionID: UUID; let onClose: () -> Void; var body: some View { Button("Close", action: onClose) } }

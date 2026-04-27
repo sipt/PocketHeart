@@ -7,11 +7,8 @@ final class Transaction {
     var amount: Decimal
     var currency: String
     var typeRaw: String
-    var title: String
-    var merchant: String?
     var occurredAt: Date
     var categoryID: UUID
-    var subcategoryID: UUID?
     var tagIDs: [UUID]
     var paymentMethodID: UUID
     var notes: String?
@@ -30,11 +27,8 @@ final class Transaction {
         amount: Decimal,
         currency: String,
         type: TransactionType,
-        title: String,
-        merchant: String? = nil,
         occurredAt: Date,
         categoryID: UUID,
-        subcategoryID: UUID? = nil,
         tagIDs: [UUID] = [],
         paymentMethodID: UUID,
         notes: String? = nil,
@@ -47,11 +41,8 @@ final class Transaction {
         self.amount = amount
         self.currency = currency
         self.typeRaw = type.rawValue
-        self.title = title
-        self.merchant = merchant
         self.occurredAt = occurredAt
         self.categoryID = categoryID
-        self.subcategoryID = subcategoryID
         self.tagIDs = tagIDs
         self.paymentMethodID = paymentMethodID
         self.notes = notes

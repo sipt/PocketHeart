@@ -112,6 +112,7 @@ final class RecordingViewModel {
         env.speech.cancel()
         isRecording = false
         liveTranscript = ""
+        errorMessage = nil
     }
 
     private func runSubmission(rawText: String, source: InputSource) async {
@@ -239,38 +240,31 @@ final class RecordingViewModel {
         let txns = try repository.transactions(for: entry)
         let rows: [TransactionRowModel] = try txns.map { t in
             let cat = try repository.category(id: t.categoryID)
-            let sub = try t.subcategoryID.flatMap { try repository.category(id: $0) }
+            let parent = try cat?.parentID.flatMap { try repository.category(id: $0) }
             let pay = try repository.paymentMethod(id: t.paymentMethodID)
             let tags = try repository.tags(ids: t.tagIDs).map(\.name)
             return TransactionRowModel(
                 id: t.id, amount: t.amount, currency: t.currency, type: t.type,
-                title: t.title, merchant: t.merchant, occurredAt: t.occurredAt,
-                categoryName: cat?.name ?? "Other", iconKey: cat?.iconKey ?? "other",
-                subcategoryName: sub?.name, tagNames: tags, paymentName: pay?.name ?? "—"
+                occurredAt: t.occurredAt,
+                createdAt: t.createdAt,
+                parentCategoryName: parent?.name,
+                categoryName: cat?.name ?? "Other",
+                iconKey: parent?.iconKey ?? cat?.iconKey ?? "other",
+                tagNames: tags, paymentName: pay?.name ?? "—",
+                notes: t.notes
             )
         }
         let totalSpent = rows.filter { $0.type == .expense }.reduce(Decimal(0)) { $0 + $1.amount }
         let totalIncome = rows.filter { $0.type == .income }.reduce(Decimal(0)) { $0 + $1.amount }
-        let summary = makeSummary(
-            spent: totalSpent,
-            income: totalIncome,
-            expenseCount: rows.filter { $0.type == .expense }.count,
-            incomeCount: rows.filter { $0.type == .income }.count,
-            currency: rows.first?.currency ?? "CNY"
-        )
+        let expenseCount = rows.filter { $0.type == .expense }.count
+        let incomeCount = rows.filter { $0.type == .income }.count
         return GroupCardModel(
             inputEntryID: entry.id, source: entry.source, when: entry.createdAt,
-            summary: summary, transactions: rows, failed: overrideFailed ?? []
+            expenseCount: expenseCount,
+            incomeCount: incomeCount,
+            net: totalIncome - totalSpent,
+            currency: rows.first?.currency ?? "CNY",
+            transactions: rows, failed: overrideFailed ?? []
         )
-    }
-
-    private func makeSummary(spent: Decimal, income: Decimal, expenseCount: Int, incomeCount: Int, currency: String) -> String {
-        var parts: [String] = []
-        if expenseCount > 0 { parts.append("\(expenseCount) expense\(expenseCount == 1 ? "" : "s")") }
-        if incomeCount > 0 { parts.append("\(incomeCount) income") }
-        let net = income - spent
-        let sign = net >= 0 ? "+" : ""
-        let amountStr = "\(currency) \(sign)\(net)"
-        return parts.joined(separator: " · ") + " · " + amountStr
     }
 }

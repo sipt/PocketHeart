@@ -8,11 +8,8 @@ final class EditTransactionViewModel {
     var amountString: String = ""
     var currency: String = "CNY"
     var type: TransactionType = .expense
-    var title: String = ""
-    var merchant: String = ""
     var occurredAt: Date = .now
     var categoryID: UUID?
-    var subcategoryID: UUID?
     var tagIDs: [UUID] = []
     var paymentMethodID: UUID?
     var notes: String = ""
@@ -39,11 +36,8 @@ final class EditTransactionViewModel {
         amountString = "\(txn.amount)"
         currency = txn.currency
         type = txn.type
-        title = txn.title
-        merchant = txn.merchant ?? ""
         occurredAt = txn.occurredAt
         categoryID = txn.categoryID
-        subcategoryID = txn.subcategoryID
         tagIDs = txn.tagIDs
         paymentMethodID = txn.paymentMethodID
         notes = txn.notes ?? ""
@@ -58,11 +52,8 @@ final class EditTransactionViewModel {
             t.amount = amount
             t.currency = self.currency
             t.type = self.type
-            t.title = self.title
-            t.merchant = self.merchant.isEmpty ? nil : self.merchant
             t.occurredAt = self.occurredAt
             if let c = self.categoryID { t.categoryID = c }
-            t.subcategoryID = self.subcategoryID
             t.tagIDs = self.tagIDs
             if let p = self.paymentMethodID { t.paymentMethodID = p }
             t.notes = self.notes.isEmpty ? nil : self.notes

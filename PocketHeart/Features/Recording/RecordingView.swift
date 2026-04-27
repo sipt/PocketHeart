@@ -75,7 +75,6 @@ struct RecordingView: View {
                                 GroupCardView(model: card) { id in editingTransactionID = id }
                             }
                         }
-                        if vm.isRecording { LiveRecordingBubble(elapsed: 0) }
                         if vm.isSubmitting { ProgressView().padding() }
                         Color.clear.frame(height: 1).id("bottom")
                     }
@@ -93,13 +92,15 @@ struct RecordingView: View {
                 Text(err).font(.system(size: 12)).foregroundStyle(Theme.warning)
                     .padding(.horizontal, 16).padding(.vertical, 6)
             }
-
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             InputBar(
                 text: $bindable.inputText,
                 isRecording: vm.isRecording,
                 liveTranscript: vm.liveTranscript,
                 onSend: { Task { await vm.submitText(vm.inputText) } },
-                onMicTap: { Task { vm.isRecording ? await vm.stopRecordingAndSubmit() : await vm.startRecording() } },
+                onMicPressDown: { Task { await vm.startRecording() } },
+                onMicCommit: { Task { await vm.stopRecordingAndSubmit() } },
                 onMicCancel: { vm.cancelRecording() }
             )
         }

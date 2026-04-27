@@ -17,18 +17,11 @@
         }
       }
     },
-    "%@" : {
+    "(Top level)" : {
 
     },
-    "%@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@"
-          }
-        }
-      }
+    "%@" : {
+
     },
     "%@ · Today" : {
       "extractionState" : "stale",
@@ -97,6 +90,12 @@
           }
         }
       }
+    },
+    "%lld 笔支出" : {
+
+    },
+    "%lld 笔收入" : {
+
     },
     "+ Income" : {
       "localizations" : {
@@ -771,6 +770,7 @@
       }
     },
     "Merchant" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1015,6 +1015,9 @@
         }
       }
     },
+    "Parent" : {
+
+    },
     "Payment" : {
       "localizations" : {
         "en" : {
@@ -1126,6 +1129,12 @@
           }
         }
       }
+    },
+    "Release to cancel" : {
+
+    },
+    "Release to send · Slide up to cancel" : {
+
     },
     "Restore" : {
       "localizations" : {
@@ -1320,6 +1329,7 @@
       }
     },
     "Title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1399,6 +1409,9 @@
           }
         }
       }
+    },
+    "暂无记录" : {
+
     }
   },
   "version" : "1.0"

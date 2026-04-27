@@ -43,8 +43,6 @@ struct EditTransactionView: View {
                 amountHero(vm: bindable)
                 Form {
                     Section {
-                        TextField("Title", text: $bindable.title)
-                        TextField("Merchant", text: $bindable.merchant)
                         DatePicker("Time", selection: $bindable.occurredAt)
                         TextField("Currency", text: $bindable.currency)
                     }
@@ -105,7 +103,11 @@ struct EditTransactionView: View {
     private func currentCategoryName(vm: EditTransactionViewModel) -> String {
         guard let id = vm.categoryID else { return "—" }
         guard let env = env else { return "—" }
-        return (try? env.repository.category(id: id))??.name ?? "—"
+        guard let cat = (try? env.repository.category(id: id)) ?? nil else { return "—" }
+        if let parentID = cat.parentID, let parent = (try? env.repository.category(id: parentID)) ?? nil {
+            return "\(parent.name) · \(cat.name)"
+        }
+        return cat.name
     }
     private func currentPaymentName(vm: EditTransactionViewModel) -> String {
         guard let id = vm.paymentMethodID else { return "—" }

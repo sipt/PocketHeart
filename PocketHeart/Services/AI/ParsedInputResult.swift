@@ -9,11 +9,8 @@ struct ParsedTransaction: Decodable, Sendable {
     let amount: Decimal?
     let currency: String?
     let type: TransactionType
-    let title: String
-    let merchant: String?
     let occurredAt: Date?
-    let categoryName: String
-    let subcategoryName: String?
+    let categoryPath: String
     let tagNames: [String]
     let paymentMethodName: String
     let notes: String?

@@ -3,29 +3,52 @@ import SwiftData
 
 struct CategoryPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Query(filter: #Predicate<LedgerCategory> { $0.parentID == nil && $0.isArchived == false }) private var categories: [LedgerCategory]
+    @Query(filter: #Predicate<LedgerCategory> { $0.isArchived == false }) private var categories: [LedgerCategory]
     @Binding var selection: UUID?
+
+    private var roots: [LedgerCategory] { categories.filter { $0.parentID == nil } }
+    private func children(of parentID: UUID) -> [LedgerCategory] {
+        categories.filter { $0.parentID == parentID }
+    }
 
     var body: some View {
         NavigationStack {
-            List(categories, id: \.id) { c in
-                Button {
-                    selection = c.id; dismiss()
-                } label: {
-                    HStack {
-                        CategoryIcon(key: c.iconKey, size: 26)
-                        Text(c.name).foregroundStyle(.white)
-                        Spacer()
-                        if selection == c.id { Image(systemName: "checkmark").foregroundStyle(Theme.primary) }
+            List {
+                ForEach(roots, id: \.id) { root in
+                    let kids = children(of: root.id)
+                    if kids.isEmpty {
+                        rowButton(for: root, indent: 0)
+                    } else {
+                        Section {
+                            rowButton(for: root, indent: 0)
+                            ForEach(kids, id: \.id) { child in
+                                rowButton(for: child, indent: 1)
+                            }
+                        }
                     }
                 }
-                .listRowBackground(Theme.surface)
             }
+            .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.bg)
             .navigationTitle("Category")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private func rowButton(for c: LedgerCategory, indent: Int) -> some View {
+        Button {
+            selection = c.id; dismiss()
+        } label: {
+            HStack(spacing: 8) {
+                if indent > 0 { Spacer().frame(width: CGFloat(indent) * 18) }
+                CategoryIcon(key: c.iconKey, size: 24)
+                Text(c.name).foregroundStyle(.white)
+                Spacer()
+                if selection == c.id { Image(systemName: "checkmark").foregroundStyle(Theme.primary) }
+            }
+        }
+        .listRowBackground(Theme.surface)
     }
 }
 

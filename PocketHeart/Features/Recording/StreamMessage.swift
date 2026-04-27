@@ -30,7 +30,10 @@ struct GroupCardModel: Equatable {
     var inputEntryID: UUID
     var source: InputSource
     var when: Date
-    var summary: String
+    var expenseCount: Int
+    var incomeCount: Int
+    var net: Decimal
+    var currency: String
     var transactions: [TransactionRowModel]
     var failed: [ParsedFailure]
 }
@@ -46,12 +49,12 @@ struct TransactionRowModel: Equatable, Identifiable {
     var amount: Decimal
     var currency: String
     var type: TransactionType
-    var title: String
-    var merchant: String?
     var occurredAt: Date
+    var createdAt: Date
+    var parentCategoryName: String?
     var categoryName: String
     var iconKey: String
-    var subcategoryName: String?
     var tagNames: [String]
     var paymentName: String
+    var notes: String?
 }

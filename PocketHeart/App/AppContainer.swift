@@ -36,15 +36,25 @@ enum AppContainer {
         let ctx = container.mainContext
         let categoryCount = (try? ctx.fetchCount(FetchDescriptor<LedgerCategory>())) ?? 0
         guard categoryCount == 0 else { return }
+        let lang = SeedLanguage.from(LocalizationManager.shared.resolvedLocale)
         for c in SeedData.categories {
-            ctx.insert(LedgerCategory(name: c.name, applicable: c.applicable, iconKey: c.iconKey, isBuiltIn: true))
+            insertCategory(c, parentID: nil, into: ctx, lang: lang)
         }
         for t in SeedData.tags {
-            ctx.insert(LedgerTag(name: t, isBuiltIn: true))
+            ctx.insert(LedgerTag(name: t.name(for: lang), isBuiltIn: true))
         }
         for p in SeedData.paymentMethods {
-            ctx.insert(PaymentMethod(name: p.name, kind: p.kind, isBuiltIn: true))
+            ctx.insert(PaymentMethod(name: p.name(for: lang), kind: p.kind, isBuiltIn: true))
         }
         try? ctx.save()
+    }
+
+    @MainActor
+    private static func insertCategory(_ seed: SeedData.CategorySeed, parentID: UUID?, into ctx: ModelContext, lang: SeedLanguage) {
+        let cat = LedgerCategory(name: seed.name(for: lang), parentID: parentID, applicable: seed.applicable, iconKey: seed.iconKey, isBuiltIn: true)
+        ctx.insert(cat)
+        for child in seed.children {
+            insertCategory(child, parentID: cat.id, into: ctx, lang: lang)
+        }
     }
 }

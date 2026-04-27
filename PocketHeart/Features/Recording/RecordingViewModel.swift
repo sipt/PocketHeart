@@ -74,8 +74,8 @@ final class RecordingViewModel {
     func submitText(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        await runSubmission(rawText: trimmed, source: .text)
         inputText = ""
+        await runSubmission(rawText: trimmed, source: .text)
     }
 
     func startRecording() async {

@@ -1398,6 +1398,38 @@
         }
       }
     },
+    "Hold to talk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold to talk"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住 说话"
+          }
+        }
+      }
+    },
+    "Release to send" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release to send"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "松开 发送"
+          }
+        }
+      }
+    },
     "Tell me what you spent…" : {
       "localizations" : {
         "en" : {

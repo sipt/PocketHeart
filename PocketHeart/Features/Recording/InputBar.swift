@@ -4,6 +4,11 @@ import CoreHaptics
 import UIKit
 #endif
 
+private enum InputMode: Equatable {
+    case voice
+    case text
+}
+
 struct InputBar: View {
     @Binding var text: String
     let isRecording: Bool
@@ -15,10 +20,13 @@ struct InputBar: View {
     let onMicCommit: () -> Void
     let onMicCancel: () -> Void
 
+    @State private var mode: InputMode = .voice
     @State private var isPressing = false
     @State private var willCancel = false
     @State private var pressStartedAt: Date?
     @State private var haptics = VoiceInputHaptics()
+    @FocusState private var textFocused: Bool
+    @Namespace private var morph
 
     private let cancelThreshold: CGFloat = -60
     private let minDuration: TimeInterval = 0.30
@@ -28,49 +36,89 @@ struct InputBar: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            contentCapsule
-            trailingButton
-                .padding(.bottom, 6)
+        VStack(spacing: 8) {
+            if isRecording {
+                recordingPopup
+                    .padding(.horizontal, 12)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.92, anchor: .bottom).combined(with: .opacity).combined(with: .offset(y: 12)),
+                        removal: .opacity.combined(with: .scale(scale: 0.96, anchor: .bottom))
+                    ))
+            }
+
+            HStack(alignment: .bottom, spacing: 10) {
+                if mode == .voice {
+                    keyboardToggleButton
+                        .matchedGeometryEffect(id: "leading", in: morph)
+                        .padding(.bottom, 6)
+                        .opacity(isRecording ? 0.4 : 1)
+                        .disabled(isRecording)
+                    voicePressBar
+                        .matchedGeometryEffect(id: "trailing", in: morph)
+                } else {
+                    textCapsule
+                        .matchedGeometryEffect(id: "leading", in: morph)
+                    trailingTextModeButton
+                        .matchedGeometryEffect(id: "trailing", in: morph)
+                        .padding(.bottom, 6)
+                }
+            }
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
         .padding(.bottom, 8)
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isRecording)
+        .animation(.spring(response: 0.32, dampingFraction: 0.85), value: isRecording)
+        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: mode)
     }
 
-    @ViewBuilder
-    private var contentCapsule: some View {
-        Group {
-            if isRecording {
-                recordingContent
-            } else {
-                idleContent
-            }
+    // MARK: - Capsule backgrounds
+
+    private func capsuleBackground(highlight: Bool = false) -> some View {
+        RoundedRectangle(cornerRadius: 26, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(highlight ? Theme.danger.opacity(0.7) : Theme.controlStroke, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
+    }
+
+    // MARK: - Voice mode (default)
+
+    private var voicePressBar: some View {
+        let label: String = {
+            if !isPressing { return L("Hold to talk") }
+            if willCancel { return L("Release to cancel") }
+            return L("Release to send")
+        }()
+        let icon = isPressing ? "waveform" : "mic.fill"
+        let tint: Color = willCancel ? Theme.danger : Theme.primary
+
+        return HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+            Text(label)
+                .font(.system(size: 15, weight: .semibold))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(Theme.onPrimary)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 52)
+        .padding(.horizontal, 18)
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(willCancel ? Theme.danger.opacity(0.7) : Theme.controlStroke, lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
+                .fill(tint)
         )
+        .shadow(color: tint.opacity(isPressing ? 0.45 : 0.25),
+                radius: isPressing ? 14 : 10, y: 4)
+        .scaleEffect(isPressing ? 0.985 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.75), value: isPressing)
+        .animation(.easeInOut(duration: 0.15), value: willCancel)
+        .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .gesture(pressGesture)
     }
 
-    private var idleContent: some View {
-        TextField("Tell me what you spent…", text: $text, axis: .vertical)
-            .font(.system(size: 16))
-            .foregroundStyle(Theme.textPrimary)
-            .tint(Theme.primary)
-            .lineLimit(1...4)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
-            .frame(minHeight: 52)
-    }
+    // MARK: - Recording popup (floats above the press bar)
 
-    private var recordingContent: some View {
+    private var recordingPopup: some View {
         VStack(alignment: .leading, spacing: 8) {
             ScrollView {
                 Text(recordingDisplayText)
@@ -91,7 +139,8 @@ struct InputBar: View {
             }
             .padding(.bottom, 12)
         }
-        .frame(minHeight: 120)
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(capsuleBackground(highlight: willCancel))
     }
 
     private var recordingDisplayText: String {
@@ -125,79 +174,111 @@ struct InputBar: View {
         .accessibilityLabel(willCancel ? cancelPrompt : sendPrompt)
     }
 
+    // MARK: - Text mode
+
+    private var textCapsule: some View {
+        TextField("Tell me what you spent…", text: $text, axis: .vertical)
+            .font(.system(size: 16))
+            .foregroundStyle(Theme.textPrimary)
+            .tint(Theme.primary)
+            .lineLimit(1...4)
+            .focused($textFocused)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .background(capsuleBackground())
+    }
+
     @ViewBuilder
-    private var trailingButton: some View {
-        if hasText && !isRecording {
+    private var trailingTextModeButton: some View {
+        if hasText {
             Button(action: onSend) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Theme.onPrimary)
                     .frame(width: 44, height: 44)
-                    .background(Theme.primary, in: Circle())
+                    .background(Theme.success, in: Circle())
+                    .shadow(color: Theme.success.opacity(0.35), radius: 8, y: 4)
             }
             .transition(.scale.combined(with: .opacity))
         } else {
-            micButton
+            Button {
+                textFocused = false
+                mode = .voice
+            } label: {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.primary, in: Circle())
+                    .shadow(color: Theme.primary.opacity(0.3), radius: 8, y: 4)
+            }
+            .transition(.scale.combined(with: .opacity))
         }
     }
 
-    private var micButton: some View {
-        ZStack {
-            Circle()
-                .fill(willCancel ? Theme.danger : Theme.primary)
+    // MARK: - Keyboard toggle (voice mode, leading, monochrome)
+
+    private var keyboardToggleButton: some View {
+        Button {
+            mode = .text
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                textFocused = true
+            }
+        } label: {
+            Image(systemName: "keyboard")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Theme.textSecondary)
                 .frame(width: 44, height: 44)
-                .shadow(color: (willCancel ? Theme.danger : Theme.primary).opacity(isPressing ? 0.6 : 0.3),
-                        radius: isPressing ? 14 : 8, y: 4)
-                .scaleEffect(isPressing ? 1.18 : 1.0)
-
-            Image(systemName: isPressing ? "waveform" : "mic.fill")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(Theme.onPrimary)
+                .background(.regularMaterial, in: Circle())
+                .overlay(Circle().stroke(Theme.controlStroke, lineWidth: 1))
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
         }
-        .contentShape(Circle())
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressing)
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    if !isPressing {
-                        isPressing = true
-                        pressStartedAt = Date()
-                        willCancel = false
-                        haptics.recordingStarted()
-                        onMicPressDown()
-                    }
-                    let nextWillCancel = value.translation.height < cancelThreshold
-                    if nextWillCancel != willCancel {
-                        willCancel = nextWillCancel
-                        haptics.cancelStateChanged()
-                    }
-                }
-                .onEnded { value in
-                    let pressed = pressStartedAt
-                    let cancel = willCancel || value.translation.height < cancelThreshold
-                    isPressing = false
-                    pressStartedAt = nil
+    }
 
-                    if cancel {
-                        onMicCancel()
-                        willCancel = false
-                        return
-                    }
-                    guard isRecordingReady else {
-                        onMicCancel()
-                        willCancel = false
-                        return
-                    }
+    // MARK: - Press gesture (shared by voice capsule & recording capsule)
+
+    private var pressGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if !isPressing {
+                    isPressing = true
+                    pressStartedAt = Date()
                     willCancel = false
-                    let elapsed = pressed.map { Date().timeIntervalSince($0) } ?? 0
-                    if elapsed < minDuration {
-                        onMicCancel()
-                        return
-                    }
-                    haptics.recordingCommitted()
-                    onMicCommit()
+                    haptics.recordingStarted()
+                    onMicPressDown()
                 }
-        )
+                let nextWillCancel = value.translation.height < cancelThreshold
+                if nextWillCancel != willCancel {
+                    willCancel = nextWillCancel
+                    haptics.cancelStateChanged()
+                }
+            }
+            .onEnded { value in
+                let pressed = pressStartedAt
+                let cancel = willCancel || value.translation.height < cancelThreshold
+                isPressing = false
+                pressStartedAt = nil
+
+                if cancel {
+                    onMicCancel()
+                    willCancel = false
+                    return
+                }
+                guard isRecordingReady else {
+                    onMicCancel()
+                    willCancel = false
+                    return
+                }
+                willCancel = false
+                let elapsed = pressed.map { Date().timeIntervalSince($0) } ?? 0
+                if elapsed < minDuration {
+                    onMicCancel()
+                    return
+                }
+                haptics.recordingCommitted()
+                onMicCommit()
+            }
     }
 }
 

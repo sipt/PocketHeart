@@ -15,7 +15,6 @@ struct PocketHeartApp: App {
             RootView()
                 .environment(\.appEnv, env)
                 .modelContainer(env.container)
-                .preferredColorScheme(.dark)
         }
     }
 }

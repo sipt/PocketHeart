@@ -53,7 +53,7 @@ struct InputBar: View {
                 .fill(.regularMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(willCancel ? Theme.danger.opacity(0.7) : Color.white.opacity(0.10), lineWidth: 1)
+                        .stroke(willCancel ? Theme.danger.opacity(0.7) : Theme.controlStroke, lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
         )
@@ -62,7 +62,7 @@ struct InputBar: View {
     private var idleContent: some View {
         TextField("Tell me what you spent…", text: $text, axis: .vertical)
             .font(.system(size: 16))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.textPrimary)
             .tint(Theme.primary)
             .lineLimit(1...4)
             .padding(.horizontal, 18)
@@ -83,7 +83,7 @@ struct InputBar: View {
             .frame(maxHeight: 70)
 
             HStack(spacing: 12) {
-                WaveformView(isActive: isRecordingReady && !willCancel, tint: willCancel ? Theme.danger : Color.white)
+                WaveformView(isActive: isRecordingReady && !willCancel, tint: willCancel ? Theme.danger : Theme.textPrimary)
                     .padding(.leading, 18)
                 Spacer(minLength: 8)
                 promptText
@@ -103,9 +103,9 @@ struct InputBar: View {
 
     private var recordingDisplayTextColor: Color {
         if !isRecordingReady || liveTranscript.isEmpty {
-            return Color.white.opacity(0.5)
+            return Theme.textSecondary
         }
-        return Color.white.opacity(0.92)
+        return Theme.textPrimary
     }
 
     private var promptText: some View {
@@ -116,7 +116,7 @@ struct InputBar: View {
             Text(sendPrompt).hidden()
             Text(cancelPrompt).hidden()
             Text(willCancel ? cancelPrompt : sendPrompt)
-                .foregroundStyle(willCancel ? Theme.danger : Color.white.opacity(0.55))
+                .foregroundStyle(willCancel ? Theme.danger : Theme.textSecondary)
                 .transaction { $0.animation = nil }
         }
         .font(.system(size: 11, weight: .medium))
@@ -131,7 +131,7 @@ struct InputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.onPrimary)
                     .frame(width: 44, height: 44)
                     .background(Theme.primary, in: Circle())
             }
@@ -152,7 +152,7 @@ struct InputBar: View {
 
             Image(systemName: isPressing ? "waveform" : "mic.fill")
                 .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.onPrimary)
         }
         .contentShape(Circle())
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressing)

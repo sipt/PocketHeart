@@ -11,7 +11,7 @@ struct TagsView: View {
             Section("Active") {
                 ForEach(tags.filter { !$0.isArchived }, id: \.id) { t in
                     HStack {
-                        Text("#" + t.name).foregroundStyle(.white)
+                        Text("#" + t.name).foregroundStyle(Theme.textPrimary)
                         Spacer()
                         Text("\(t.usageCount)").foregroundStyle(Theme.textMuted)
                     }

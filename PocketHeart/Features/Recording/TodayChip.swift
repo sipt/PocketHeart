@@ -9,7 +9,7 @@ struct TodayChip: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("SPENT TODAY").font(.system(size: 10.5, weight: .medium)).tracking(0.3).foregroundStyle(Theme.textSecondary)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(spent).font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                    Text(spent).font(.system(size: 22, weight: .bold)).foregroundStyle(Theme.textPrimary)
                     if let income = incomeText {
                         Text(income).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.success)
                     }

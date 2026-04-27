@@ -20,9 +20,8 @@ struct LedgerRepositoryTests {
         let (repo, ctx) = makeRepo()
         let parsed = ParsedTransaction(
             amount: Decimal(string: "38"), currency: "CNY", type: .expense,
-            title: "Lunch", merchant: nil,
             occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
-            categoryName: "Food", subcategoryName: "Lunch", tagNames: ["work"],
+            categoryPath: "Food > Lunch", tagNames: ["work"],
             paymentMethodName: "WeChat Pay", notes: nil
         )
         let result = try repo.save(input: "lunch", source: .text, providerID: nil, parsed: ParsedInputResult(transactions: [parsed], failed: []))
@@ -35,8 +34,7 @@ struct LedgerRepositoryTests {
         let (repo, ctx) = makeRepo()
         let parsed = ParsedTransaction(
             amount: Decimal(12), currency: "CNY", type: .expense,
-            title: "Boba", merchant: nil, occurredAt: .now,
-            categoryName: "Drinks", subcategoryName: nil, tagNames: ["new"],
+            occurredAt: .now, categoryPath: "Drinks", tagNames: ["new"],
             paymentMethodName: "Alipay Mini", notes: nil
         )
         _ = try repo.save(input: "boba", source: .text, providerID: nil, parsed: ParsedInputResult(transactions: [parsed], failed: []))
@@ -49,9 +47,8 @@ struct LedgerRepositoryTests {
     @Test func failsTransactionWithoutAmountAsPartialFailure() throws {
         let (repo, _) = makeRepo()
         let parsed = ParsedTransaction(
-            amount: nil, currency: "CNY", type: .expense, title: "?",
-            merchant: nil, occurredAt: nil, categoryName: "Food",
-            subcategoryName: nil, tagNames: [], paymentMethodName: "Cash", notes: nil
+            amount: nil, currency: "CNY", type: .expense, occurredAt: nil,
+            categoryPath: "Food", tagNames: [], paymentMethodName: "Cash", notes: nil
         )
         let result = try repo.save(input: "?", source: .text, providerID: nil, parsed: ParsedInputResult(transactions: [parsed], failed: []))
         #expect(result.savedTransactionIDs.isEmpty)
@@ -62,9 +59,8 @@ struct LedgerRepositoryTests {
         let (repo, ctx) = makeRepo()
         let before = Date()
         let parsed = ParsedTransaction(
-            amount: Decimal(5), currency: "CNY", type: .expense, title: "x",
-            merchant: nil, occurredAt: nil, categoryName: "Food",
-            subcategoryName: nil, tagNames: [], paymentMethodName: "Cash", notes: nil
+            amount: Decimal(5), currency: "CNY", type: .expense, occurredAt: nil,
+            categoryPath: "Food", tagNames: [], paymentMethodName: "Cash", notes: nil
         )
         _ = try repo.save(input: "x", source: .text, providerID: nil, parsed: ParsedInputResult(transactions: [parsed], failed: []))
         let txn = try ctx.fetch(FetchDescriptor<Transaction>()).first!
@@ -74,17 +70,16 @@ struct LedgerRepositoryTests {
     @Test func editTransactionUpdatesUpdatedAt() async throws {
         let (repo, ctx) = makeRepo()
         let parsed = ParsedTransaction(
-            amount: Decimal(10), currency: "CNY", type: .expense, title: "old",
-            merchant: nil, occurredAt: .now, categoryName: "Food",
-            subcategoryName: nil, tagNames: [], paymentMethodName: "Cash", notes: nil
+            amount: Decimal(10), currency: "CNY", type: .expense, occurredAt: .now,
+            categoryPath: "Food", tagNames: [], paymentMethodName: "Cash", notes: "old"
         )
         _ = try repo.save(input: "x", source: .text, providerID: nil, parsed: ParsedInputResult(transactions: [parsed], failed: []))
         var txn = try ctx.fetch(FetchDescriptor<Transaction>()).first!
         let originalUpdated = txn.updatedAt
         try? await Task.sleep(nanoseconds: 5_000_000)
-        try repo.update(txn) { $0.title = "new" }
+        try repo.update(txn) { $0.notes = "new" }
         txn = try ctx.fetch(FetchDescriptor<Transaction>()).first!
-        #expect(txn.title == "new")
+        #expect(txn.notes == "new")
         #expect(txn.updatedAt > originalUpdated)
     }
 

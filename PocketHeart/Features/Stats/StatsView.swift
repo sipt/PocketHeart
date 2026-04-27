@@ -17,13 +17,13 @@ struct StatsView: View {
                                 CategoryIcon(key: iconKey(for: slice.categoryName), size: 32)
                                 VStack(alignment: .leading, spacing: 5) {
                                     HStack {
-                                        Text(slice.categoryName).font(.system(size: 14, weight: .medium)).foregroundStyle(.white)
+                                        Text(slice.categoryName).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.textPrimary)
                                         Spacer()
-                                        Text("¥\(slice.amount)").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                                        Text("¥\(slice.amount)").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                                     }
                                     GeometryReader { geo in
                                         ZStack(alignment: .leading) {
-                                            Capsule().fill(Color.white.opacity(0.08))
+                                            Capsule().fill(Theme.pillFill)
                                             Capsule().fill(Theme.primary).frame(width: geo.size.width * slice.percent)
                                         }
                                     }
@@ -41,7 +41,7 @@ struct StatsView: View {
                     .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerCard))
                     .padding(.horizontal, 16)
                 } else {
-                    ProgressView().tint(.white).padding(.top, 80)
+                    ProgressView().tint(Theme.primary).padding(.top, 80)
                 }
             }
             .padding(.bottom, 32)
@@ -61,7 +61,7 @@ struct StatsView: View {
                     Text(monthLabel.uppercased()).font(.system(size: 11, weight: .medium)).tracking(0.4).foregroundStyle(Theme.textSecondary)
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("¥").font(.system(size: 16)).foregroundStyle(Theme.textSecondary)
-                        Text("\(s.monthSpent)").font(.system(size: 32, weight: .bold)).foregroundStyle(.white)
+                        Text("\(s.monthSpent)").font(.system(size: 32, weight: .bold)).foregroundStyle(Theme.textPrimary)
                     }
                 }
                 Spacer()

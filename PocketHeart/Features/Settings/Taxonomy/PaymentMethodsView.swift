@@ -12,7 +12,7 @@ struct PaymentMethodsView: View {
             Section("Active") {
                 ForEach(methods.filter { !$0.isArchived }, id: \.id) { m in
                     HStack {
-                        Text(m.name).foregroundStyle(.white)
+                        Text(m.name).foregroundStyle(Theme.textPrimary)
                         Spacer()
                         Text(m.kind.rawValue).foregroundStyle(Theme.textMuted).font(.caption)
                     }

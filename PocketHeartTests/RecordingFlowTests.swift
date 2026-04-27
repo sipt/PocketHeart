@@ -81,9 +81,9 @@ struct RecordingViewModelTests {
 
     @Test func textSubmissionAddsUserBubbleAndGroupCard() async throws {
         let parsed = ParsedTransaction(
-            amount: Decimal(38), currency: "CNY", type: .expense, title: "Lunch",
-            merchant: nil, occurredAt: Date(), categoryName: "Food",
-            subcategoryName: nil, tagNames: ["work"], paymentMethodName: "WeChat Pay", notes: nil
+            amount: Decimal(38), currency: "CNY", type: .expense,
+            occurredAt: Date(), categoryPath: "Food",
+            tagNames: ["work"], paymentMethodName: "WeChat Pay", notes: "Lunch"
         )
         let (vm, _) = makeVM(parser: FakeParser(result: .success(.init(transactions: [parsed], failed: []))))
         await vm.submitText("lunch 38")
@@ -134,9 +134,9 @@ struct RecordingViewModelTests {
         defer { LocalizationManager.shared.language = previous }
 
         let parsed = ParsedTransaction(
-            amount: Decimal(12), currency: "CNY", type: .expense, title: "Coffee",
-            merchant: nil, occurredAt: Date(), categoryName: "Food",
-            subcategoryName: nil, tagNames: [], paymentMethodName: "Cash", notes: nil
+            amount: Decimal(12), currency: "CNY", type: .expense,
+            occurredAt: Date(), categoryPath: "Food",
+            tagNames: [], paymentMethodName: "Cash", notes: "Coffee"
         )
         let parser = CapturingParser(result: .success(.init(transactions: [parsed], failed: [])))
         LocalizationManager.shared.language = .zhHans

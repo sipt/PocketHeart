@@ -64,7 +64,7 @@ struct CategoriesView: View {
     private func rootRow(_ c: LedgerCategory) -> some View {
         HStack {
             CategoryIcon(key: c.iconKey, size: 26)
-            Text(c.name).foregroundStyle(.white)
+            Text(c.name).foregroundStyle(Theme.textPrimary)
             Spacer()
             if c.isAICreated { Text("AI").font(.system(size: 9.5)).foregroundStyle(Theme.primary) }
         }

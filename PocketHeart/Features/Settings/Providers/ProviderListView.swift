@@ -14,7 +14,7 @@ struct ProviderListView: View {
                         ProviderBadge(name: p.displayName)
                         VStack(alignment: .leading) {
                             HStack {
-                                Text(p.displayName).font(.system(size: 14.5, weight: .semibold)).foregroundStyle(.white)
+                                Text(p.displayName).font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                                 if p.isDefault {
                                     Text("DEFAULT").font(.system(size: 9.5, weight: .bold))
                                         .padding(.horizontal, 6).padding(.vertical, 1)
@@ -43,9 +43,9 @@ struct ProviderListView: View {
                 Button { newProvider = true } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $newProvider) { NavigationStack { ProviderEditView(providerID: nil) }.preferredColorScheme(.dark) }
+        .sheet(isPresented: $newProvider) { NavigationStack { ProviderEditView(providerID: nil) } }
         .sheet(item: Binding(get: { editingID.map { IdentifiedID(id: $0) } }, set: { editingID = $0?.id })) { wrapper in
-            NavigationStack { ProviderEditView(providerID: wrapper.id) }.preferredColorScheme(.dark)
+            NavigationStack { ProviderEditView(providerID: wrapper.id) }
         }
     }
 }

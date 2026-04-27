@@ -43,7 +43,7 @@ struct CategoryPickerSheet: View {
             HStack(spacing: 8) {
                 if indent > 0 { Spacer().frame(width: CGFloat(indent) * 18) }
                 CategoryIcon(key: c.iconKey, size: 24)
-                Text(c.name).foregroundStyle(.white)
+                Text(c.name).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 if selection == c.id { Image(systemName: "checkmark").foregroundStyle(Theme.primary) }
             }
@@ -62,7 +62,7 @@ struct PaymentPickerSheet: View {
             List(methods, id: \.id) { m in
                 Button { selection = m.id; dismiss() } label: {
                     HStack {
-                        Text(m.name).foregroundStyle(.white)
+                        Text(m.name).foregroundStyle(Theme.textPrimary)
                         Spacer()
                         if selection == m.id { Image(systemName: "checkmark").foregroundStyle(Theme.primary) }
                     }
@@ -89,7 +89,7 @@ struct TagsPickerSheet: View {
                     if let i = selection.firstIndex(of: t.id) { selection.remove(at: i) } else { selection.append(t.id) }
                 } label: {
                     HStack {
-                        Text("#" + t.name).foregroundStyle(.white)
+                        Text("#" + t.name).foregroundStyle(Theme.textPrimary)
                         Spacer()
                         if selection.contains(t.id) { Image(systemName: "checkmark").foregroundStyle(Theme.primary) }
                     }

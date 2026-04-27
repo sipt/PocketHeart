@@ -7,8 +7,8 @@ struct MetaPill: View {
         Text(text)
             .font(.system(size: 10.5, weight: .medium))
             .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(Color.white.opacity(muted ? 0.05 : 0.08), in: Capsule())
-            .foregroundStyle(Color.white.opacity(muted ? 0.55 : 0.85))
+            .background(Theme.pillFill.opacity(muted ? 0.75 : 1), in: Capsule())
+            .foregroundStyle(muted ? Theme.textMuted : Theme.textSecondary)
     }
 }
 
@@ -32,7 +32,7 @@ struct TypePill: View {
             .font(.system(size: 12, weight: .medium))
             .padding(.horizontal, 11).padding(.vertical, 5)
             .background(active ? color.opacity(0.16) : Color.clear, in: Capsule())
-            .overlay(Capsule().stroke(active ? color.opacity(0.3) : Color.white.opacity(0.15), lineWidth: 1))
-            .foregroundStyle(active ? color : Color.white.opacity(0.5))
+            .overlay(Capsule().stroke(active ? color.opacity(0.3) : Theme.surfaceBorder, lineWidth: 1))
+            .foregroundStyle(active ? color : Theme.textSecondary)
     }
 }

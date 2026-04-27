@@ -15,7 +15,7 @@ struct RecordingView: View {
             if let vm {
                 content(vm: vm)
             } else {
-                ProgressView().tint(.white)
+                ProgressView().tint(Theme.primary)
             }
         }
         .background(Theme.bg.ignoresSafeArea())
@@ -63,7 +63,7 @@ struct RecordingView: View {
                         }
                         if vm.isLoadingOlder {
                             ProgressView()
-                                .tint(.white)
+                                .tint(Theme.primary)
                                 .padding(.vertical, 10)
                         }
                         ForEach(vm.messages) { m in

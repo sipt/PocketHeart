@@ -26,7 +26,6 @@ struct EditTransactionView: View {
             .navigationTitle("Edit transaction")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .preferredColorScheme(.dark)
         .onAppear {
             if vm == nil, let env {
                 vm = EditTransactionViewModel(txnID: transactionID, repository: env.repository, context: env.container.mainContext)
@@ -89,7 +88,7 @@ struct EditTransactionView: View {
                 TextField("0.00", text: $b.amountString)
                     .keyboardType(.decimalPad)
                     .font(.system(size: 48, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 220)
             }

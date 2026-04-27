@@ -21,7 +21,6 @@ struct TransactionModelTests {
             amount: Decimal(string: "38.50")!,
             currency: "CNY",
             type: .expense,
-            title: "Lunch",
             occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
             categoryID: UUID(),
             paymentMethodID: UUID(),
@@ -41,7 +40,16 @@ struct SeedingTests {
         let ctx = container.mainContext
         let cats = try ctx.fetch(FetchDescriptor<LedgerCategory>())
         let pays = try ctx.fetch(FetchDescriptor<PaymentMethod>())
-        #expect(cats.count == SeedData.categories.count)
+        #expect(cats.count == seededCategoryCount)
         #expect(pays.count == SeedData.paymentMethods.count)
+    }
+
+    private var seededCategoryCount: Int {
+        func count(_ seeds: [SeedData.CategorySeed]) -> Int {
+            seeds.reduce(0) { total, seed in
+                total + 1 + count(seed.children)
+            }
+        }
+        return count(SeedData.categories)
     }
 }

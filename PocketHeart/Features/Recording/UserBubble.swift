@@ -15,11 +15,11 @@ struct UserBubbleView: View {
                             Image(systemName: "mic.fill").font(.system(size: 10))
                             Text("VOICE").font(.system(size: 10.5, weight: .medium)).tracking(0.3)
                         }
-                        .foregroundStyle(Color.white.opacity(0.75))
+                        .foregroundStyle(Theme.onPrimary.opacity(0.75))
                     }
                     Text(text)
                         .font(.system(size: 14))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.onPrimary)
                         .lineLimit(nil)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 9)

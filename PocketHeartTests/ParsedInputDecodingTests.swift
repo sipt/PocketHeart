@@ -6,14 +6,14 @@ struct ParsedInputDecodingTests {
     @Test func decodesTwoExpenses() throws {
         let json = #"""
         {"transactions":[
-          {"amount":38.5,"currency":"CNY","type":"expense","title":"Lunch","occurredAt":"2026-04-25T12:30:00+08:00","categoryName":"Food","tagNames":["work"],"paymentMethodName":"WeChat Pay"},
-          {"amount":28,"currency":"CNY","type":"expense","title":"Latte","occurredAt":"2026-04-25T16:00:00+08:00","categoryName":"Coffee","tagNames":[],"paymentMethodName":"CMB Credit"}
+          {"amount":38.5,"currency":"CNY","type":"expense","occurredAt":"2026-04-25T12:30:00+08:00","categoryPath":"Food","tagNames":["work"],"paymentMethodName":"WeChat Pay","notes":"Lunch"},
+          {"amount":28,"currency":"CNY","type":"expense","occurredAt":"2026-04-25T16:00:00+08:00","categoryPath":"Coffee","tagNames":[],"paymentMethodName":"CMB Credit","notes":"Latte"}
         ],"failed":[]}
         """#
         let result = try ParsedInputDecoder.decode(json)
         #expect(result.transactions.count == 2)
         #expect(result.transactions[0].amount == Decimal(string: "38.5"))
-        #expect(result.transactions[1].title == "Latte")
+        #expect(result.transactions[1].notes == "Latte")
     }
 
     @Test func decodesPartialFailure() throws {
@@ -59,7 +59,7 @@ struct AIParsingServiceTests {
     )
 
     @Test func parsesValidResponse() async throws {
-        let json = #"{"transactions":[{"amount":12,"currency":"CNY","type":"expense","title":"a","occurredAt":"2026-04-25T10:00:00+08:00","categoryName":"Food","tagNames":[],"paymentMethodName":"Cash"}],"failed":[]}"#
+        let json = #"{"transactions":[{"amount":12,"currency":"CNY","type":"expense","occurredAt":"2026-04-25T10:00:00+08:00","categoryPath":"Food","tagNames":[],"paymentMethodName":"Cash","notes":"a"}],"failed":[]}"#
         let svc = AIParsingService(adapter: FakeAdapter(response: .success(json)))
         let result = try await svc.parse(input: "x", apiKey: "k", baseURL: "https://x/v1", model: "m", context: context)
         #expect(result.transactions.count == 1)

@@ -9,6 +9,8 @@ final class RecordingViewModel {
     var inputText: String = ""
     var isSubmitting: Bool = false
     var isRecording: Bool = false
+    var isRecordingReady: Bool = false
+    var recordingStartSignal: Int = 0
     var liveTranscript: String = ""
     var errorMessage: String?
     var summary: StatsSummary?
@@ -23,6 +25,7 @@ final class RecordingViewModel {
     private let pageSize = 25
     private var loadedEntries: [InputEntry] = []
     private var failedOverridesByEntryID: [UUID: [ParsedFailure]] = [:]
+    private var recordingSessionID: UUID?
 
     init(env: AppEnvironment, repository: LedgerRepository, stats: StatsService) {
         self.env = env
@@ -76,25 +79,50 @@ final class RecordingViewModel {
     }
 
     func startRecording() async {
+        let sessionID = UUID()
+        recordingSessionID = sessionID
+        isRecordingReady = false
+
         guard await env.speech.requestAuthorization() else {
+            if recordingSessionID == sessionID {
+                recordingSessionID = nil
+            }
             errorMessage = L("Microphone or speech permission denied. Use the text input or open Settings.")
             return
         }
+        guard recordingSessionID == sessionID else { return }
+
         do {
             isRecording = true
             liveTranscript = ""
             try await env.speech.startRecording(locale: LocalizationManager.shared.resolvedLocale) { [weak self] partial in
                 Task { @MainActor in self?.liveTranscript = partial }
             }
+            guard recordingSessionID == sessionID, isRecording else {
+                env.speech.cancel()
+                return
+            }
+            isRecordingReady = true
+            recordingStartSignal += 1
         } catch {
-            isRecording = false
-            errorMessage = String(format: L("Couldn't start recording: %@"), error.localizedDescription)
+            if recordingSessionID == sessionID {
+                isRecording = false
+                isRecordingReady = false
+                recordingSessionID = nil
+                errorMessage = String(format: L("Couldn't start recording: %@"), error.localizedDescription)
+            }
         }
     }
 
     func stopRecordingAndSubmit() async {
         guard isRecording else { return }
+        guard isRecordingReady else {
+            cancelRecording()
+            return
+        }
         isRecording = false
+        isRecordingReady = false
+        recordingSessionID = nil
         do {
             let transcript = try await env.speech.stop()
             liveTranscript = ""
@@ -109,8 +137,10 @@ final class RecordingViewModel {
     }
 
     func cancelRecording() {
+        recordingSessionID = nil
         env.speech.cancel()
         isRecording = false
+        isRecordingReady = false
         liveTranscript = ""
         errorMessage = nil
     }

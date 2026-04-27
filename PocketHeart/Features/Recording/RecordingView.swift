@@ -51,7 +51,7 @@ struct RecordingView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(spacing: 12) {
                         if vm.hasMoreHistory {
                             Color.clear
                                 .frame(height: 1)
@@ -97,6 +97,8 @@ struct RecordingView: View {
             InputBar(
                 text: $bindable.inputText,
                 isRecording: vm.isRecording,
+                isRecordingReady: vm.isRecordingReady,
+                recordingStartSignal: vm.recordingStartSignal,
                 liveTranscript: vm.liveTranscript,
                 onSend: { Task { await vm.submitText(vm.inputText) } },
                 onMicPressDown: { Task { await vm.startRecording() } },

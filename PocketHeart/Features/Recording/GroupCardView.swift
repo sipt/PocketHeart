@@ -22,11 +22,11 @@ struct GroupCardView: View {
                 failedSection
             }
         }
-        .background(Theme.surfaceElevated)
+        .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerLarge, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cornerLarge, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
         )
     }
 
@@ -128,6 +128,10 @@ struct GroupCardView: View {
     // MARK: - Helpers
 
     private var hairline: some View {
-        Rectangle().fill(Theme.separator).frame(height: 0.5)
+        Rectangle().fill(Color.white.opacity(0.12)).frame(height: 0.5)
+    }
+
+    private var cardBackground: Color {
+        Color(red: 0x24/255, green: 0x24/255, blue: 0x2B/255)
     }
 }

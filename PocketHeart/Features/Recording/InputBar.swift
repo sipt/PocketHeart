@@ -1,8 +1,14 @@
 import SwiftUI
+import CoreHaptics
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct InputBar: View {
     @Binding var text: String
     let isRecording: Bool
+    let isRecordingReady: Bool
+    let recordingStartSignal: Int
     let liveTranscript: String
     let onSend: () -> Void
     let onMicPressDown: () -> Void
@@ -12,6 +18,7 @@ struct InputBar: View {
     @State private var isPressing = false
     @State private var willCancel = false
     @State private var pressStartedAt: Date?
+    @State private var haptics = VoiceInputHaptics()
 
     private let cancelThreshold: CGFloat = -60
     private let minDuration: TimeInterval = 0.30
@@ -29,7 +36,6 @@ struct InputBar: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isRecording)
-        .animation(.easeInOut(duration: 0.15), value: willCancel)
     }
 
     @ViewBuilder
@@ -67,9 +73,9 @@ struct InputBar: View {
     private var recordingContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             ScrollView {
-                Text(liveTranscript.isEmpty ? L("Listening…") : liveTranscript)
+                Text(recordingDisplayText)
                     .font(.system(size: 15))
-                    .foregroundStyle(liveTranscript.isEmpty ? Color.white.opacity(0.5) : Color.white.opacity(0.92))
+                    .foregroundStyle(recordingDisplayTextColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -77,17 +83,46 @@ struct InputBar: View {
             .frame(maxHeight: 70)
 
             HStack(spacing: 12) {
-                WaveformView(isActive: !willCancel, tint: willCancel ? Theme.danger : Color.white)
+                WaveformView(isActive: isRecordingReady && !willCancel, tint: willCancel ? Theme.danger : Color.white)
                     .padding(.leading, 18)
                 Spacer(minLength: 8)
-                Text(willCancel ? L("Release to cancel") : L("Release to send · Slide up to cancel"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(willCancel ? Theme.danger : Color.white.opacity(0.55))
+                promptText
                     .padding(.trailing, 18)
             }
             .padding(.bottom, 12)
         }
         .frame(minHeight: 120)
+    }
+
+    private var recordingDisplayText: String {
+        if !isRecordingReady {
+            return L("Starting recording…")
+        }
+        return liveTranscript.isEmpty ? L("Listening…") : liveTranscript
+    }
+
+    private var recordingDisplayTextColor: Color {
+        if !isRecordingReady || liveTranscript.isEmpty {
+            return Color.white.opacity(0.5)
+        }
+        return Color.white.opacity(0.92)
+    }
+
+    private var promptText: some View {
+        let sendPrompt = L("Release to send · Slide up to cancel")
+        let cancelPrompt = L("Release to cancel")
+
+        return ZStack(alignment: .trailing) {
+            Text(sendPrompt).hidden()
+            Text(cancelPrompt).hidden()
+            Text(willCancel ? cancelPrompt : sendPrompt)
+                .foregroundStyle(willCancel ? Theme.danger : Color.white.opacity(0.55))
+                .transaction { $0.animation = nil }
+        }
+        .font(.system(size: 11, weight: .medium))
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .accessibilityLabel(willCancel ? cancelPrompt : sendPrompt)
     }
 
     @ViewBuilder
@@ -128,36 +163,145 @@ struct InputBar: View {
                         isPressing = true
                         pressStartedAt = Date()
                         willCancel = false
-                        let gen = UIImpactFeedbackGenerator(style: .medium)
-                        gen.prepare()
-                        gen.impactOccurred()
+                        haptics.recordingStarted()
                         onMicPressDown()
                     }
                     let nextWillCancel = value.translation.height < cancelThreshold
                     if nextWillCancel != willCancel {
                         willCancel = nextWillCancel
-                        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                        haptics.cancelStateChanged()
                     }
                 }
                 .onEnded { value in
                     let pressed = pressStartedAt
                     let cancel = willCancel || value.translation.height < cancelThreshold
                     isPressing = false
-                    willCancel = false
                     pressStartedAt = nil
 
                     if cancel {
                         onMicCancel()
+                        willCancel = false
                         return
                     }
+                    guard isRecordingReady else {
+                        onMicCancel()
+                        willCancel = false
+                        return
+                    }
+                    willCancel = false
                     let elapsed = pressed.map { Date().timeIntervalSince($0) } ?? 0
                     if elapsed < minDuration {
                         onMicCancel()
                         return
                     }
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    haptics.recordingCommitted()
                     onMicCommit()
                 }
         )
+    }
+}
+
+private final class VoiceInputHaptics {
+    private var engine: CHHapticEngine?
+    private let startFallback = UIImpactFeedbackGenerator(style: .medium)
+    private let cancel = UIImpactFeedbackGenerator(style: .rigid)
+    private let commit = UINotificationFeedbackGenerator()
+    private let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+
+    init() {
+        bootEngine()
+        startFallback.prepare()
+        cancel.prepare()
+        commit.prepare()
+    }
+
+    private func bootEngine() {
+        guard supportsHaptics else { return }
+        do {
+            let engine = try CHHapticEngine()
+            engine.playsHapticsOnly = true
+            engine.isAutoShutdownEnabled = false
+            engine.resetHandler = { [weak self] in
+                guard let self else { return }
+                try? self.engine?.start()
+            }
+            engine.stoppedHandler = { [weak self] _ in
+                guard let self else { return }
+                try? self.engine?.start()
+            }
+            try engine.start()
+            self.engine = engine
+        } catch {
+            self.engine = nil
+        }
+    }
+
+    func recordingStarted() {
+        if playTransient(intensity: 0.9, sharpness: 0.5) { return }
+        startFallback.impactOccurred(intensity: 0.9)
+        startFallback.prepare()
+    }
+
+    func cancelStateChanged() {
+        if playTransient(intensity: 0.75, sharpness: 0.7) { return }
+        cancel.impactOccurred(intensity: 0.75)
+        cancel.prepare()
+    }
+
+    func recordingCommitted() {
+        if playSuccessPattern() { return }
+        commit.notificationOccurred(.success)
+        commit.prepare()
+    }
+
+    private func playSuccessPattern() -> Bool {
+        guard supportsHaptics, let engine else { return false }
+        do {
+            try engine.start()
+            let first = CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+                ],
+                relativeTime: 0
+            )
+            let second = CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+                ],
+                relativeTime: 0.1
+            )
+            let pattern = try CHHapticPattern(events: [first, second], parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    @discardableResult
+    private func playTransient(intensity: Float, sharpness: Float) -> Bool {
+        guard supportsHaptics, let engine else { return false }
+        do {
+            try engine.start()
+            let event = CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
+                ],
+                relativeTime: 0
+            )
+            let pattern = try CHHapticPattern(events: [event], parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+            return true
+        } catch {
+            return false
+        }
     }
 }

@@ -30,7 +30,7 @@ struct UserBubbleView: View {
                     .foregroundStyle(Theme.textMuted)
             }
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, 2)
     }
 }
 
